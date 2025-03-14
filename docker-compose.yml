@@ -1,0 +1,61 @@
+---
+services:
+  tailscale-mealie:
+    image: tailscale/tailscale:latest
+    container_name: tailscale-mealie
+    hostname: ${TS_HOSTNAME}
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_EXTRA_ARGS=--advertise-tags=tag:container
+      - TS_SERVE_CONFIG=/config/mealie.json
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
+    volumes:
+      - ./state:/var/lib/tailscale
+      - ./config:/config
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - net_admin
+    restart: unless-stopped
+  
+  mealie:
+    image: ghcr.io/mealie-recipes/mealie:v1.0.0
+    container_name: mealie
+    network_mode: service:tailscale-mealie
+    depends_on:
+      - tailscale-mealie
+    volumes:
+      - mealie-data:/app/data
+    environment:
+      - ALLOW_SIGNUP=true
+    restart: unless-stopped
+
+volumes:
+  mealie-data:
+    driver: local
+  tailscale-mealie:
+    driver: local
+
+configs:
+  mealie.json:
+    content: |
+      {
+        "TCP": {
+          "443": {
+            "HTTPS": true
+          }
+        },
+        "Web": {
+          "${TS_CERT_DOMAIN}:443": {
+            "Handlers": {
+              "/": {
+                "Proxy": "http://127.0.0.1:9000"
+              }
+            }
+          }
+        },
+        "AllowFunnel": {
+          "${TS_CERT_DOMAIN}:443": false
+        }
+      }
