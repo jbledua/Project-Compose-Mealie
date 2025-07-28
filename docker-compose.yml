@@ -1,4 +1,3 @@
----
 services:
   tailscale-mealie:
     image: tailscale/tailscale:latest
@@ -11,28 +10,35 @@ services:
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_USERSPACE=false
     volumes:
-      - ${PWD}/state:/var/lib/tailscale
-      - ${PWD}/config:/config
+      - ./state:/var/lib/tailscale
+      - ./config:/config
     devices:
       - /dev/net/tun:/dev/net/tun
     cap_add:
       - net_admin
+    networks:
+      - mealie-net
     restart: unless-stopped
-  
+
   mealie:
     image: ghcr.io/mealie-recipes/mealie:v1.0.0
     container_name: mealie
-    network_mode: service:tailscale-mealie
+    networks:
+      - mealie-net
     depends_on:
       - tailscale-mealie
     volumes:
       - mealie-data:/app/data
     environment:
       - ALLOW_SIGNUP=true
+    ports:
+      - "9925:80"
     restart: unless-stopped
 
 volumes:
   mealie-data:
     driver: local
-  tailscale-mealie:
-    driver: local
+
+networks:
+  mealie-net:
+    driver: bridge
