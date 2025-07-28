@@ -1,19 +1,28 @@
 services:
   mealie:
+    image: ghcr.io/mealie-recipes/mealie:v1.6.0
     container_name: mealie
-    image: ghcr.io/mealie-recipes/mealie:v1.0.0
+    restart: always
+    ports:
+      - "9925:9000"  # Public fallback port (Nginx will also use this)
+    deploy:
+      resources:
+        limits:
+          memory: 1000M
     volumes:
-      - ./mealie-data:/app/data
+      - mealie-data:/app/data/
     environment:
       - ALLOW_SIGNUP=true
-    network_mode: "host"
-    depends_on:
-      - tailscale
-    restart: unless-stopped
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TIMEZONE}
+      - MAX_WORKERS=1
+      - WEB_CONCURRENCY=1
+      - BASE_URL=${BASE_URL}
 
   tailscale:
-    container_name: tailscale
     image: tailscale/tailscale:latest
+    container_name: tailscale
     hostname: ${TAILSCALE_HOSTNAME}
     environment:
       - TS_AUTHKEY=${TAILSCALE_AUTHKEY}
@@ -23,9 +32,12 @@ services:
     volumes:
       - ./tailscale-state:/var/lib/tailscale
       - ./tailscale-config:/config
-    network_mode: "host"
+    network_mode: host
     devices:
       - /dev/net/tun:/dev/net/tun
     cap_add:
       - NET_ADMIN
     restart: unless-stopped
+
+volumes:
+  mealie-data:
