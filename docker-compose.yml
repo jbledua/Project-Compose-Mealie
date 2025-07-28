@@ -1,44 +1,33 @@
+version: "3.8"
+
 services:
-  tailscale-mealie:
-    image: tailscale/tailscale:latest
-    container_name: tailscale-mealie
-    hostname: ${TS_HOSTNAME}
+  mealie:
+    container_name: mealie
+    image: ghcr.io/mealie-recipes/mealie:v1.0.0
+    volumes:
+      - ./mealie-data:/app/data
     environment:
-      - TS_AUTHKEY=${TS_AUTHKEY}
+      - ALLOW_SIGNUP=true
+    network_mode: "host"
+    depends_on:
+      - tailscale
+    restart: unless-stopped
+
+  tailscale:
+    container_name: tailscale
+    image: tailscale/tailscale:latest
+    hostname: ${TAILSCALE_HOSTNAME}
+    environment:
+      - TS_AUTHKEY=${TAILSCALE_AUTHKEY}
       - TS_EXTRA_ARGS=--advertise-tags=tag:container
-      - TS_SERVE_CONFIG=/config/mealie.json
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_USERSPACE=false
     volumes:
-      - ./state:/var/lib/tailscale
-      - ./config:/config
+      - ./tailscale-state:/var/lib/tailscale
+      - ./tailscale-config:/config
+    network_mode: "host"
     devices:
       - /dev/net/tun:/dev/net/tun
     cap_add:
-      - net_admin
-    networks:
-      - mealie-net
+      - NET_ADMIN
     restart: unless-stopped
-
-  mealie:
-    image: ghcr.io/mealie-recipes/mealie:v1.0.0
-    container_name: mealie
-    networks:
-      - mealie-net
-    depends_on:
-      - tailscale-mealie
-    volumes:
-      - mealie-data:/app/data
-    environment:
-      - ALLOW_SIGNUP=true
-    ports:
-      - "9925:80"
-    restart: unless-stopped
-
-volumes:
-  mealie-data:
-    driver: local
-
-networks:
-  mealie-net:
-    driver: bridge
