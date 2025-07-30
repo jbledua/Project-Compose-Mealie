@@ -4,7 +4,7 @@ services:
     container_name: mealie-app
     restart: always
     ports:
-      - "127.0.0.1:${PUBLIC_PORT:-9925}:9000"  # Public port (default: 9925)
+      - "${PUBLIC_PORT:-9926}:9000"  # Expose to LAN and Tailscale (default: 9926)
     volumes:
       - mealie-data:/app/data/
     environment:
