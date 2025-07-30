@@ -1,4 +1,4 @@
-# Mealie + Tailscale Docker Deployment
+# Project Compose: Mealie
 
 This project sets up a private Mealie recipe server accessible via [Tailscale](https://tailscale.com), with optional access from the local network or public internet by customizing the exposed port. Designed for testing and production environments with minimal configuration.
 
