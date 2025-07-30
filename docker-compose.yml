@@ -1,43 +1,45 @@
 services:
   mealie:
-    image: ghcr.io/mealie-recipes/mealie:v1.6.0
-    container_name: mealie
+    image: ghcr.io/mealie-recipes/mealie:latest
+    container_name: mealie-app
     restart: always
     ports:
-      - "9925:9000"  # Public fallback port (Nginx will also use this)
-    deploy:
-      resources:
-        limits:
-          memory: 1000M
+      - "127.0.0.1:${PUBLIC_PORT:-9925}:9000"  # Public port (default: 9925)
     volumes:
       - mealie-data:/app/data/
     environment:
-      - ALLOW_SIGNUP=true
-      - PUID=1000
-      - PGID=1000
-      - TZ=${TIMEZONE}
-      - MAX_WORKERS=1
-      - WEB_CONCURRENCY=1
-      - BASE_URL=${BASE_URL}
+      - ALLOW_SIGNUP=true                             # Allow user signups
+      - PUID=1000                                      # User ID for file permissions
+      - PGID=1000                                      # Group ID for file permissions
+      - TZ=${TIMEZONE:-Canada/Eastern}                # Timezone for the container (default: Canada/Eastern)
+      - MAX_WORKERS=1                                  # Max concurrent workers (adjust based on system resources)
+      - WEB_CONCURRENCY=1                              # Gunicorn web concurrency
+      - BASE_URL=${BASE_URL}                           # Public-facing base URL (e.g., https://mealie.example.com)
+    networks:
+      - mealie-net
 
-  tailscale:
+  mealie-tailscale:
     image: tailscale/tailscale:latest
-    container_name: tailscale
-    hostname: ${TAILSCALE_HOSTNAME}
+    container_name: mealie-tailscale
+    hostname: ${TAILSCALE_HOSTNAME:-mealie-test}       # Tailscale device name (default: mealie-test)
     environment:
-      - TS_AUTHKEY=${TAILSCALE_AUTHKEY}
-      - TS_EXTRA_ARGS=--advertise-tags=tag:container
-      - TS_STATE_DIR=/var/lib/tailscale
-      - TS_USERSPACE=false
+      - TS_AUTHKEY=${TAILSCALE_AUTHKEY}                # Tailscale auth key (generate from https://login.tailscale.com/admin/authkeys)
+      - TS_EXTRA_ARGS=--advertise-tags=tag:container   # Optional: tag for ACLs or routing in Tailscale
+      - TS_STATE_DIR=/var/lib/tailscale                # Internal state storage path
+      - TS_USERSPACE=true                              # Run in userspace networking mode (no host networking)
     volumes:
-      - ./tailscale-state:/var/lib/tailscale
-      - ./tailscale-config:/config
-    network_mode: host
+      - ./mealie-tailscale-state:/var/lib/tailscale    # Persistent state for Tailscale
     devices:
-      - /dev/net/tun:/dev/net/tun
+      - /dev/net/tun:/dev/net/tun                      # Required for Tailscale networking
     cap_add:
-      - NET_ADMIN
+      - NET_ADMIN                                      # Required for Tailscale networking
     restart: unless-stopped
+    networks:
+      - mealie-net
 
 volumes:
   mealie-data:
+
+networks:
+  mealie-net:
+    driver: bridge
