@@ -21,7 +21,7 @@ services:
     restart: unless-stopped
 
   mealie:
-    image: ghcr.io/mealie-recipes/latest
+    image: ghcr.io/mealie-recipes/mealie:latest
     container_name: mealie-app
     network_mode: service:ts-mealie
     depends_on:
