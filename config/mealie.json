@@ -1,11 +1,7 @@
 {
   "TCP": {
     "443": {
-      "HTTPS": true
-    }
-  },
-  "HTTPS": {
-    "": {
+      "HTTPS": true,
       "Proxy": "http://127.0.0.1:9000"
     }
   }
