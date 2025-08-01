@@ -1,5 +1,5 @@
 services:
-  mealie-app:
+  mealie:
     image: ghcr.io/mealie-recipes/mealie:latest
     container_name: mealie-app
     restart: always
@@ -12,31 +12,21 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=${TIMEZONE:-Canada/Eastern}
-    networks:
-      - internal
 
-  mealie-tailscale:
+  tailscale:
     image: tailscale/tailscale:latest
-    container_name: mealie-tailscale
+    container_name: tailscale
+    network_mode: "host"
     cap_add:
       - NET_ADMIN
       - NET_RAW
-    network_mode: bridge
     volumes:
       - tailscale-data:/var/lib/tailscale
     environment:
       - TS_AUTHKEY=${TS_AUTHKEY}
       - TS_HOSTNAME=${TS_HOSTNAME:-mealie-tailscale}
     command: tailscaled
-    networks:
-      - internal
-    depends_on:
-      - mealie-app
 
 volumes:
   mealie-data:
   tailscale-data:
-
-networks:
-  internal:
-    driver: bridge
