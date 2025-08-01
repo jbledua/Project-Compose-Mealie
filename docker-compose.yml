@@ -1,45 +1,42 @@
 services:
-  mealie:
+  mealie-app:
     image: ghcr.io/mealie-recipes/mealie:latest
     container_name: mealie-app
     restart: always
     ports:
-      - "${PUBLIC_PORT:-9926}:9000"  # Expose to LAN and Tailscale (default: 9926)
+      - "${PUBLIC_PORT:-9926}:9000"
     volumes:
       - mealie-data:/app/data/
     environment:
-      - ALLOW_SIGNUP=true                             # Allow user signups
-      - PUID=1000                                      # User ID for file permissions
-      - PGID=1000                                      # Group ID for file permissions
-      - TZ=${TIMEZONE:-Canada/Eastern}                # Timezone for the container (default: Canada/Eastern)
-      - MAX_WORKERS=1                                  # Max concurrent workers (adjust based on system resources)
-      - WEB_CONCURRENCY=1                              # Gunicorn web concurrency
-      - BASE_URL=${BASE_URL}                           # Public-facing base URL (e.g., https://mealie.example.com)
+      - ALLOW_SIGNUP=true
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TIMEZONE:-Canada/Eastern}
     networks:
-      - mealie-net
+      - internal
 
   mealie-tailscale:
     image: tailscale/tailscale:latest
     container_name: mealie-tailscale
-    hostname: ${TAILSCALE_HOSTNAME:-mealie-test}       # Tailscale device name (default: mealie-test)
-    environment:
-      - TS_AUTHKEY=${TAILSCALE_AUTHKEY}                # Tailscale auth key (generate from https://login.tailscale.com/admin/authkeys)
-      - TS_EXTRA_ARGS=--advertise-tags=tag:container   # Optional: tag for ACLs or routing in Tailscale
-      - TS_STATE_DIR=/var/lib/tailscale                # Internal state storage path
-      - TS_USERSPACE=true                              # Run in userspace networking mode (no host networking)
-    volumes:
-      - ./mealie-tailscale-state:/var/lib/tailscale    # Persistent state for Tailscale
-    devices:
-      - /dev/net/tun:/dev/net/tun                      # Required for Tailscale networking
     cap_add:
-      - NET_ADMIN                                      # Required for Tailscale networking
-    restart: unless-stopped
+      - NET_ADMIN
+      - NET_RAW
+    network_mode: bridge
+    volumes:
+      - tailscale-data:/var/lib/tailscale
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_HOSTNAME=${TS_HOSTNAME:-mealie-tailscale}
+    command: tailscaled
     networks:
-      - mealie-net
+      - internal
+    depends_on:
+      - mealie-app
 
 volumes:
   mealie-data:
+  tailscale-data:
 
 networks:
-  mealie-net:
+  internal:
     driver: bridge
