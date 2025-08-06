@@ -1,5 +1,4 @@
 ---
-version: "3.7"
 services:
   ts-mealie:
     image: tailscale/tailscale:latest
@@ -8,12 +7,10 @@ services:
     environment:
       - TS_AUTHKEY=${TAILSCALE_AUTHKEY}
       - TS_EXTRA_ARGS=--advertise-tags=tag:container --reset
-      - TS_SERVE_CONFIG=/config/mealie.json
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_USERSPACE=false
     volumes:
       - ${PWD}/state:/var/lib/tailscale
-      - ${PWD}/config:/config
     devices:
       - /dev/net/tun:/dev/net/tun
     cap_add:
@@ -24,14 +21,39 @@ services:
     image: ghcr.io/mealie-recipes/mealie:latest
     container_name: mealie-app
     network_mode: service:ts-mealie
+    ports:
+      - "${MEALIE_PUBLIC_PORT:-9926}:9000"  # Public proxy from host port to Mealie's internal port
     depends_on:
       - ts-mealie
     volumes:
       - mealie-data:/app/data
     environment:
       - ALLOW_SIGNUP=true
-      - BASE_URL=${BASE_URL}
-      - TZ=${TIMEZONE}
+      - BASE_URL=${MEALIE_BASE_URL}
+      - TZ=${MEALIE_TZ}
+      - OPENAI_BASE_URL=${MEALIE_OPENAI_BASE_URL:-}
+      - OPENAI_API_KEY=${MEALIE_OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${MEALIE_OPENAI_MODEL:-}
+      - OPENAI_CUSTOM_HEADERS=${MEALIE_OPENAI_CUSTOM_HEADERS:-}
+      - OPENAI_CUSTOM_PARAMS=${MEALIE_OPENAI_CUSTOM_PARAMS:-}
+      - OPENAI_ENABLE_IMAGE_SERVICES=${MEALIE_OPENAI_ENABLE_IMAGE_SERVICES:-}
+      - OPENAI_WORKERS=${MEALIE_OPENAI_WORKERS:-}
+      - OPENAI_SEND_DATABASE_DATA=${MEALIE_OPENAI_SEND_DATABASE_DATA:-}
+      - OPENAI_REQUEST_TIMEOUT=${MEALIE_OPENAI_REQUEST_TIMEOUT:-}
+      - THEME_LIGHT_PRIMARY=${MEALIE_THEME_LIGHT_PRIMARY:-#E58325}
+      - THEME_LIGHT_ACCENT=${MEALIE_THEME_LIGHT_ACCENT:-#007A99}
+      - THEME_LIGHT_SECONDARY=${MEALIE_THEME_LIGHT_SECONDARY:-#973542}
+      - THEME_LIGHT_SUCCESS=${MEALIE_THEME_LIGHT_SUCCESS:-#43A047}
+      - THEME_LIGHT_INFO=${MEALIE_THEME_LIGHT_INFO:-#1976D2}
+      - THEME_LIGHT_WARNING=${MEALIE_THEME_LIGHT_WARNING:-#FF6D00}
+      - THEME_LIGHT_ERROR=${MEALIE_THEME_LIGHT_ERROR:-#EF5350}
+      - THEME_DARK_PRIMARY=${MEALIE_THEME_DARK_PRIMARY:-#E58325}
+      - THEME_DARK_ACCENT=${MEALIE_THEME_DARK_ACCENT:-#007A99}
+      - THEME_DARK_SECONDARY=${MEALIE_THEME_DARK_SECONDARY:-#973542}
+      - THEME_DARK_SUCCESS=${MEALIE_THEME_DARK_SUCCESS:-#43A047}
+      - THEME_DARK_INFO=${MEALIE_THEME_DARK_INFO:-#1976D2}
+      - THEME_DARK_WARNING=${MEALIE_THEME_DARK_WARNING:-#FF6D00}
+      - THEME_DARK_ERROR=${MEALIE_THEME_DARK_ERROR:-#EF5350}
     restart: unless-stopped
 
 volumes:
