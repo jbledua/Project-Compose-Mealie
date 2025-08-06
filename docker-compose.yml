@@ -21,8 +21,6 @@ services:
     image: ghcr.io/mealie-recipes/mealie:latest
     container_name: mealie-app
     network_mode: service:ts-mealie
-    ports:
-      - "${MEALIE_PUBLIC_PORT:-9926}:9000"  # Public proxy from host port to Mealie's internal port
     depends_on:
       - ts-mealie
     volumes:
