@@ -23,7 +23,7 @@ services:
     image: ghcr.io/mealie-recipes/mealie:latest
     container_name: "${STACK_PREFIX:-mealie1}-app"
     depends_on:
-      - ${STACK_PREFIX:-mealie1}
+      - ts-mealie
     ports:
       - "${PUBLIC_PORT:-9926}:9000"
     volumes:
