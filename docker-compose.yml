@@ -2,63 +2,51 @@
 services:
   ts-mealie:
     image: tailscale/tailscale:latest
-    container_name: mealie-tailscale
-    hostname: ${TAILSCALE_HOSTNAME}
+    container_name: ${STACK_PREFIX:-mealie1}-tailscale
+    hostname: ${TAILSCALE_HOSTNAME:-${STACK_PREFIX}-ts}
     environment:
       - TS_AUTHKEY=${TAILSCALE_AUTHKEY}
-      - TS_EXTRA_ARGS=--advertise-tags=tag:container --reset
+      - TS_EXTRA_ARGS=${TS_EXTRA_ARGS:---advertise-tags=tag:container --reset}
       - TS_STATE_DIR=/var/lib/tailscale
-      - TS_USERSPACE=false
+      - TS_USERSPACE=${TS_USERSPACE:-false}
     volumes:
-      - ts_mealie_state:/var/lib/tailscale
+      - ${STACK_PREFIX}_ts_state:/var/lib/tailscale
     devices:
       - /dev/net/tun:/dev/net/tun
     cap_add:
       - net_admin
     restart: unless-stopped
+    networks:
+      - ${STACK_PREFIX}_net
 
   mealie:
     image: ghcr.io/mealie-recipes/mealie:latest
-    container_name: mealie-app
-    network_mode: service:ts-mealie
+    container_name: ${STACK_PREFIX:-mealie1}-app
     depends_on:
       - ts-mealie
+    # Expose a unique public port per instance
+    ports:
+      - "${PUBLIC_PORT:-9926}:9000"
     volumes:
-      - mealie-data:/app/data
+      - ${STACK_PREFIX}_mealie_data:/app/data
     environment:
-      - ALLOW_SIGNUP=true
-      - BASE_URL=${MEALIE_BASE_URL}
-      - TZ=${MEALIE_TZ}
-      - OPENAI_API_KEY=${MEALIE_OPENAI_API_KEY:-}
-      - OPENAI_ENABLE_IMAGE_SERVICES=${MEALIE_OPENAI_ENABLE_IMAGE_SERVICES:-False}
-      - THEME_LIGHT_PRIMARY=${MEALIE_THEME_LIGHT_PRIMARY:-#E58325}
-      - THEME_LIGHT_ACCENT=${MEALIE_THEME_LIGHT_ACCENT:-#007A99}
-      - THEME_LIGHT_SECONDARY=${MEALIE_THEME_LIGHT_SECONDARY:-#973542}
-      - THEME_LIGHT_SUCCESS=${MEALIE_THEME_LIGHT_SUCCESS:-#43A047}
-      - THEME_LIGHT_INFO=${MEALIE_THEME_LIGHT_INFO:-#1976D2}
-      - THEME_LIGHT_WARNING=${MEALIE_THEME_LIGHT_WARNING:-#FF6D00}
-      - THEME_LIGHT_ERROR=${MEALIE_THEME_LIGHT_ERROR:-#EF5350}
-      - THEME_DARK_PRIMARY=${MEALIE_THEME_DARK_PRIMARY:-#E58325}
-      - THEME_DARK_ACCENT=${MEALIE_THEME_DARK_ACCENT:-#007A99}
-      - THEME_DARK_SECONDARY=${MEALIE_THEME_DARK_SECONDARY:-#973542}
-      - THEME_DARK_SUCCESS=${MEALIE_THEME_DARK_SUCCESS:-#43A047}
-      - THEME_DARK_INFO=${MEALIE_THEME_DARK_INFO:-#1976D2}
-      - THEME_DARK_WARNING=${MEALIE_THEME_DARK_WARNING:-#FF6D00}
-      - THEME_DARK_ERROR=${MEALIE_THEME_DARK_ERROR:-#EF5350}
-      # SMTP Configurations
-      - SMTP_HOST=${MEALIE_SMTP_HOST:-}
-      - SMTP_PORT=${MEALIE_SMTP_PORT:-587}
-      - SMTP_FROM_NAME=${MEALIE_SMTP_FROM_NAME:-Mealie}
-      - SMTP_AUTH_STRATEGY=${MEALIE_SMTP_AUTH_STRATEGY:-TLS}
-      - SMTP_FROM_EMAIL=${MEALIE_SMTP_FROM_EMAIL:-}
-      - SMTP_USER=${MEALIE_SMTP_USER:-}
-      - SMTP_PASSWORD=${MEALIE_SMTP_PASSWORD:-}
+      # --- Common Mealie settings (examples; keep yours as needed) ---
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TIMEZONE:-Canada/Eastern}
+      - ALLOW_SIGNUP=${ALLOW_SIGNUP:-true}
+      - BASE_URL=${BASE_URL:-http://localhost:${PUBLIC_PORT:-9926}}
+      # --- Your existing theme / OpenAI / SMTP vars go here as-is ---
     restart: unless-stopped
+    networks:
+      - ${STACK_PREFIX}_net
+
+networks:
+  ${STACK_PREFIX}_net:
+    name: ${STACK_PREFIX}_net
 
 volumes:
-  mealie-data:
-    driver: local
-  ts-mealie:
-    driver: local
-  ts_mealie_state:
-    driver: local 
+  ${STACK_PREFIX}_mealie_data:
+    name: ${STACK_PREFIX}_mealie_data
+  ${STACK_PREFIX}_ts_state:
+    name: ${STACK_PREFIX}_ts_state
