@@ -10,7 +10,7 @@ services:
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_USERSPACE=false
     volumes:
-      - ${PWD}/state:/var/lib/tailscale
+      - ts_mealie_state:/var/lib/tailscale
     devices:
       - /dev/net/tun:/dev/net/tun
     cap_add:
@@ -60,3 +60,5 @@ volumes:
     driver: local
   ts-mealie:
     driver: local
+  ts_mealie_state:
+    driver: local 
