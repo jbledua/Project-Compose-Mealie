@@ -2,51 +2,50 @@
 services:
   ts-mealie:
     image: tailscale/tailscale:latest
-    container_name: ${STACK_PREFIX:-mealie1}-tailscale
-    hostname: ${TAILSCALE_HOSTNAME:-${STACK_PREFIX}-ts}
+    container_name: "${STACK_PREFIX:-mealie1}-tailscale"
+    hostname: "${STACK_PREFIX:-mealie1}-ts"
     environment:
       - TS_AUTHKEY=${TAILSCALE_AUTHKEY}
       - TS_EXTRA_ARGS=${TS_EXTRA_ARGS:---advertise-tags=tag:container --reset}
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_USERSPACE=${TS_USERSPACE:-false}
     volumes:
-      - ${STACK_PREFIX}_ts_state:/var/lib/tailscale
+      - ts_state:/var/lib/tailscale
     devices:
       - /dev/net/tun:/dev/net/tun
     cap_add:
       - net_admin
     restart: unless-stopped
     networks:
-      - ${STACK_PREFIX}_net
+      - app_net
 
   mealie:
     image: ghcr.io/mealie-recipes/mealie:latest
-    container_name: ${STACK_PREFIX:-mealie1}-app
+    container_name: "${STACK_PREFIX:-mealie1}-app"
     depends_on:
       - ts-mealie
-    # Expose a unique public port per instance
     ports:
       - "${PUBLIC_PORT:-9926}:9000"
     volumes:
-      - ${STACK_PREFIX}_mealie_data:/app/data
+      - mealie_data:/app/data
     environment:
-      # --- Common Mealie settings (examples; keep yours as needed) ---
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
       - TZ=${TIMEZONE:-Canada/Eastern}
       - ALLOW_SIGNUP=${ALLOW_SIGNUP:-true}
       - BASE_URL=${BASE_URL:-http://localhost:${PUBLIC_PORT:-9926}}
-      # --- Your existing theme / OpenAI / SMTP vars go here as-is ---
     restart: unless-stopped
     networks:
-      - ${STACK_PREFIX}_net
+      - app_net
+
+# Static keys; unique *actual* names via `name:` with STACK_PREFIX
+volumes:
+  mealie_data:
+    name: "${STACK_PREFIX:-mealie1}_mealie_data"
+  ts_state:
+    name: "${STACK_PREFIX:-mealie1}_ts_state"
 
 networks:
-  ${STACK_PREFIX}_net:
-    name: ${STACK_PREFIX}_net
+  app_net:
+    name: "${STACK_PREFIX:-mealie1}_net"
 
-volumes:
-  ${STACK_PREFIX}_mealie_data:
-    name: ${STACK_PREFIX}_mealie_data
-  ${STACK_PREFIX}_ts_state:
-    name: ${STACK_PREFIX}_ts_state
